@@ -85,9 +85,9 @@ contract rarity_extended_care {
     function claim_gold(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
             require(_isApprovedOrOwner(_summoners[i]));
+            helper_isApprovedOrApprove(_summoners[i]);
             uint _claimable = _gold.claimable(_summoners[i]);
             if (_claimable > 0) {
-                helper_isApprovedOrApprove(_summoners[i]);
                 _gold.claim(_summoners[i]);
             }
         }
