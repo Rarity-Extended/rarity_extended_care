@@ -34,7 +34,7 @@ The `care_of` function takes 3 parameters :
 - `_whatToDo` : The array of boolean that represent the actions to perform. The order is : `[daily_adventure, daily_cellar, level_up, claim_gold]`.
 - `_threshold_cellar` : The threshold to perform the cellar.
 
-For example, if you want to perform the daily adventure + tge daily cellar for all your summoners, you can do :
+For example, if you want to perform the daily adventure + the daily cellar for all your summoners, you can do :
 ```js
 care_of([12345, 23456, 65432], [true, true, false, false], 1)
 ```
