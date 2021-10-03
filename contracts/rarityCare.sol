@@ -24,7 +24,7 @@ interface IRarityTheCellar {
     function adventurers_log(uint adventurer) external view returns (uint);
 }
 
-contract rarity_care {
+contract rarity_extended_care {
     IRarity constant _rm = IRarity(0xce761D788DF608BD21bdd59d6f4B54b2e27F25Bb);
     IRarityGold constant _gold = IRarityGold(0x2069B76Afe6b734Fb65D1d099E7ec64ee9CC76B2);
     IRarityTheCellar constant _cellar = IRarityTheCellar(0x2A0F1cB17680161cF255348dDFDeE94ea8Ca196A);
