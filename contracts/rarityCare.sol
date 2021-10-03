@@ -10,6 +10,7 @@ interface IRarity {
     function adventurers_log(uint adventurer) external view returns (uint);
     function approve(address to, uint256 tokenId) external;
     function getApproved(uint256 tokenId) external view returns (address);
+    function ownerOf(uint _summoner) external view returns (address);
 }
 
 interface IRarityGold {
@@ -28,6 +29,7 @@ contract rarity_care {
     IRarityGold constant _gold = IRarityGold(0x2069B76Afe6b734Fb65D1d099E7ec64ee9CC76B2);
     IRarityTheCellar constant _cellar = IRarityTheCellar(0x2A0F1cB17680161cF255348dDFDeE94ea8Ca196A);
     string constant public name = "Rarity Extended Care";
+    mapping(address => mapping(uint => bool)) public allowance;
 
     /**
     **  @dev Perform an adventure for an array of summoners
@@ -35,6 +37,7 @@ contract rarity_care {
     */
     function adventure(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             if (block.timestamp > _rm.adventurers_log(_summoners[i])) {
                 _rm.adventure(_summoners[i]);
             }
@@ -48,6 +51,7 @@ contract rarity_care {
     */
     function adventure_cellar(uint[] memory _summoners, uint _threshold) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             if (block.timestamp > _cellar.adventurers_log(_summoners[i])) {
                 uint _reward = _cellar.scout(_summoners[i]);
                 if (_reward >= _threshold) {
@@ -58,13 +62,13 @@ contract rarity_care {
         }
     }
     
-    
     /**
     **  @dev Level up an array of summoners
     **  @param _summoners array of tokenID to use
     */
     function level_up(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             uint _level = _rm.level(_summoners[i]);
             uint _xp_required = helper_xp_required(_level);
             uint _xp_available = _rm.xp(_summoners[i]);
@@ -80,6 +84,7 @@ contract rarity_care {
     */
     function claim_gold(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             uint _claimable = _gold.claimable(_summoners[i]);
             if (_claimable > 0) {
                 helper_isApprovedOrApprove(_summoners[i]);
@@ -97,6 +102,7 @@ contract rarity_care {
     */
     function care_of(uint[] memory _summoners, bool[4] memory _whatToDo, uint _threshold_cellar) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             helper_isApprovedOrApprove(_summoners[i]);
             if (_whatToDo[0]) {
                 if (block.timestamp > _rm.adventurers_log(_summoners[i])) {
@@ -129,6 +135,19 @@ contract rarity_care {
     }
 
     /**
+    **  @dev Allow an address to use some summoners
+    **  @param _summoners array of tokenID to use
+    **  @param _operator address allowed to use the summoners
+    **  @param _appoved approved or not
+    */
+    function setAllowance(uint[] memory _summoners, address _operator, bool _appoved) external {
+        for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
+            allowance[_operator][_summoners[i]] = _appoved;
+        }
+    }
+
+    /**
     **  @dev Perform an adventure for an array of summoners
     **  @notice UNSAFE FUNCTION. There is no check so if any 
     **  of the adventurer cannot perform the action, the whole tx 
@@ -137,6 +156,7 @@ contract rarity_care {
     */
     function UNSAFE_adventure(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             _rm.adventure(_summoners[i]);
         }
     }
@@ -151,6 +171,7 @@ contract rarity_care {
     */
     function UNSAFE_adventure_cellar(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             helper_isApprovedOrApprove(_summoners[i]);
             _cellar.adventure(_summoners[i]);
         }
@@ -165,6 +186,7 @@ contract rarity_care {
     */
     function UNSAFE_level_up(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             _rm.level_up(_summoners[i]);
         }
     }
@@ -178,6 +200,7 @@ contract rarity_care {
     */
     function UNSAFE_claim_gold(uint[] memory _summoners) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             helper_isApprovedOrApprove(_summoners[i]);
             _gold.claim(_summoners[i]);
         }
@@ -194,6 +217,7 @@ contract rarity_care {
     */
     function UNSAFE_care_of(uint[] memory _summoners, bool[4] memory _whatToDo) external {
         for (uint256 i = 0; i < _summoners.length; i++) {
+            require(_isApprovedOrOwner(_summoners[i]));
             helper_isApprovedOrApprove(_summoners[i]);
             if (_whatToDo[0]) {
                 _rm.adventure(_summoners[i]);
@@ -210,17 +234,35 @@ contract rarity_care {
         }
     }
     
+    /**
+    **  @dev Compute the xp required to level up
+    **	@param curent_level: level of the summoner
+    **/
     function helper_xp_required(uint curent_level) public pure returns (uint xp_to_next_level) {
-        xp_to_next_level = curent_level * 1000e18;
-        for (uint i = 1; i < curent_level; i++) {
-            xp_to_next_level += curent_level * 1000e18;
-        }
+        xp_to_next_level = curent_level * (curent_level + 1) * 500e18;
     }
     
+    /**
+    **  @dev Check if the summoner is approved for this contract as getApprovedForAll is
+    **  not used for gold & cellar.
+    **	@param _adventurer: TokenID of the adventurer we want to check
+    **/
     function helper_isApprovedOrApprove(uint _summoner) internal {
         address _approved = _rm.getApproved(_summoner);
         if (_approved != address(this)) {
             _rm.approve(address(this), _summoner);
         }
+    }
+
+    /**
+    **  @dev Check if the msg.sender has the autorization to act on this adventurer
+    **	@param _adventurer: TokenID of the adventurer we want to check
+    **/
+    function _isApprovedOrOwner(uint _summoner) internal view returns (bool) {
+        return (
+            _rm.getApproved(_summoner) == msg.sender ||
+            _rm.ownerOf(_summoner) == msg.sender ||
+            allowance[msg.sender][_summoner] == true
+        );
     }
 }
